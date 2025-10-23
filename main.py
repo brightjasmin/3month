@@ -2,35 +2,44 @@ import flet as ft
 from datetime import datetime
 
 def main(page: ft.Page):
-    page.title = "Приветствие по времени суток"
-    page.theme_mode = ft.ThemeMode.LIGHT  # начальная тема
+    page.title = "Приветствие с подсветкой имени"
+    page.theme_mode = ft.ThemeMode.LIGHT
 
     name_input = ft.TextField(label="Введите ваше имя", width=320)
-    greeting_text = ft.Text("", size=20)  # обычный текст для вывода
+    greeting_text = ft.Text(spans=[])  # будет содержать TextSpan'ы
 
-    def get_greeting(name: str) -> str:
+    def get_greeting_part() -> str:
         hour = datetime.now().hour
         if 6 <= hour < 12:
-            return f"Доброе утро, {name}!"
+            return "Доброе утро, "
         elif 12 <= hour < 18:
-            return f"Добрый день, {name}!"
+            return "Добрый день, "
         elif 18 <= hour < 24:
-            return f"Добрый вечер, {name}!"
+            return "Добрый вечер, "
         else:
-            return f"Доброй ночи, {name}!"
+            return "Доброй ночи, "
 
     def show_greeting(e):
-        name = name_input.value.strip() or "Гость"
-        greeting_text.value = get_greeting(name)
+        name = name_input.value.strip()
+        if not name:
+            # показываем snackbar вместо изменения текста
+            page.snack_bar = ft.SnackBar(ft.Text("Введите имя!"))
+            page.snack_bar.open = True
+        else:
+            greeting_text.spans = [
+                ft.TextSpan(get_greeting_part()),
+                # выделяем имя: жирный + синий (hex)
+                ft.TextSpan(name, style=ft.TextStyle(weight="bold", color="#1E88E5")),
+                ft.TextSpan("!")
+            ]
         page.update()
 
-    # Создаём IconButton, передаём иконку через content=ft.Icon(...)
+    # Тема: иконка через content
     theme_button = ft.IconButton(content=ft.Icon(name="brightness_7"), tooltip="Сменить тему")
 
     def toggle_theme(e):
         if page.theme_mode == ft.ThemeMode.LIGHT:
             page.theme_mode = ft.ThemeMode.DARK
-            # обновим иконку на "луну"
             theme_button.content = ft.Icon(name="brightness_2")
         else:
             page.theme_mode = ft.ThemeMode.LIGHT
@@ -44,7 +53,7 @@ def main(page: ft.Page):
     page.add(
         ft.Row([theme_button], alignment=ft.MainAxisAlignment.END),
         name_input,
-        ft.Row([greet_button], alignment=ft.MainAxisAlignment.CENTER),
+        greet_button,
         ft.Divider(),
         greeting_text,
     )
