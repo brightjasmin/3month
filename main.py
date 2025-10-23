@@ -1,61 +1,73 @@
-import flet as ft
-from datetime import datetime
+import flet as ft 
+from db import main_db
+import datetime
+
 
 def main(page: ft.Page):
-    page.title = "Приветствие с подсветкой имени"
+    page.title = 'ToDo list'
     page.theme_mode = ft.ThemeMode.LIGHT
 
-    name_input = ft.TextField(label="Введите ваше имя", width=320)
-    greeting_text = ft.Text(spans=[])  # будет содержать TextSpan'ы
+    task_list = ft.Column(spacing=10)
 
-    def get_greeting_part() -> str:
-        hour = datetime.now().hour
-        if 6 <= hour < 12:
-            return "Доброе утро, "
-        elif 12 <= hour < 18:
-            return "Добрый день, "
-        elif 18 <= hour < 24:
-            return "Добрый вечер, "
-        else:
-            return "Доброй ночи, "
-
-    def show_greeting(e):
-        name = name_input.value.strip()
-        if not name:
-            # показываем snackbar вместо изменения текста
-            page.snack_bar = ft.SnackBar(ft.Text("Введите имя!"))
-            page.snack_bar.open = True
-        else:
-            greeting_text.spans = [
-                ft.TextSpan(get_greeting_part()),
-                # выделяем имя: жирный + синий (hex)
-                ft.TextSpan(name, style=ft.TextStyle(weight="bold", color="#1E88E5")),
-                ft.TextSpan("!")
-            ]
+    def load_task():
+        task_list.controls.clear()
+        for task_id, task_text in main_db.get_tasks():
+            task_list.controls.append(create_task_row(task_id=task_id, task_text=task_text))
         page.update()
 
-    # Тема: иконка через content
-    theme_button = ft.IconButton(content=ft.Icon(name="brightness_7"), tooltip="Сменить тему")
 
-    def toggle_theme(e):
-        if page.theme_mode == ft.ThemeMode.LIGHT:
-            page.theme_mode = ft.ThemeMode.DARK
-            theme_button.content = ft.Icon(name="brightness_2")
-        else:
-            page.theme_mode = ft.ThemeMode.LIGHT
-            theme_button.content = ft.Icon(name="brightness_7")
-        page.update()
+    def create_task_row(task_id, task_text):
+        task_field = ft.TextField(value=task_text, read_only=True, expand=True)
+        now = datetime.datetime.now()
+        time = now.strftime("%Y-%m-%d %H:%M:%S")
+        task_time = ft.Text(value=time)
 
-    theme_button.on_click = toggle_theme
+        def enable_edit(_):
+            task_field.read_only = False
+            task_field.update()
 
-    greet_button = ft.ElevatedButton("Поздороваться", on_click=show_greeting)
+        edit_button = ft.IconButton(icon=ft.Icons.EDIT, tooltip="Редактировать", on_click=enable_edit, icon_color=ft.Colors.ORANGE_700)
 
-    page.add(
-        ft.Row([theme_button], alignment=ft.MainAxisAlignment.END),
-        name_input,
-        greet_button,
-        ft.Divider(),
-        greeting_text,
-    )
+        def save_task(_):
+            main_db.update_task(task_id=task_id, new_task=task_field.value)
+            task_field.read_only = True
+            task_field.update()
+            page.update()
 
-ft.app(target=main)
+        save_button = ft.IconButton(icon=ft.Icons.SAVE_ALT_ROUNDED, on_click=save_task)
+
+        def delete_task(_):
+            main_db.delete_task(task_id=task_id)
+            load_task()
+            
+
+        delete_button = ft.IconButton(icon=ft.Icons.DELETE, tooltip="Удалить", on_click=delete_task, icon_color=ft.Colors.RED_700)
+
+        return ft.Row([task_time, task_field, edit_button, save_button, delete_button])
+
+    def add_task(_):
+        if task_input.value:
+            task = task_input.value
+            task_id = main_db.add_task(task)
+            task_list.controls.append(create_task_row(task_id=task_id, task_text=task))
+
+            task_input.value = ''
+            page.update()
+    
+    def delete_all_tasks(_):
+        main_db.delete_all_tasks()
+        load_task()
+    
+
+    delete_all_button = ft.ElevatedButton(text='Delete all tasks',on_click=delete_all_tasks)
+    task_input = ft.TextField(label='Введите новую задачу', expand=True)
+    add_button = ft.IconButton(icon=ft.Icons.ADD, tooltip='Добавить задачу', on_click=add_task)
+
+    page.add(ft.Row([task_input, add_button, delete_all_button]), task_list)
+
+    load_task()
+
+
+if __name__ == '__main__':
+    main_db.init_db()
+    ft.app(target=main)
