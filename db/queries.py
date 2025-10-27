@@ -1,7 +1,8 @@
 CREATE_TABLE_TASK = """
     CREATE TABLE IF NOT EXISTS tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        task TEXT NOT NULL
+        task TEXT NOT NULL,
+        is_completed BOOLEAN NOT NULL DEFAULT 0
     )
 """
 

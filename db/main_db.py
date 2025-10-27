@@ -10,6 +10,22 @@ def init_db():
     conn.commit()
     conn.close()
 
+def mark_task_as_completed(task_id):
+    conn = sqlite3.connect(path_db)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE tasks SET is_completed = 1 WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+
+
+
+def delete_completed_tasks():
+    conn = sqlite3.connect(path_db)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM tasks WHERE is_completed = 1")
+    conn.commit()
+    conn.close()
+
 
 def add_task(task):
     conn = sqlite3.connect(path_db)
